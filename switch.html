@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>智慧教育云</title>
+  <style>
+  </style>
+  <link rel="stylesheet" href="./css/index.css">
+  <script src="./script/jquery-3.2.1.min.js"></script>
+  <script src="./script/crypto-js.js"></script>
+</head>
+
+<body>
+  <div class="shade ">
+    <div class="shade-bg"></div>
+    <div class="shade-content">
+      <div class="upload-success display-hide">
+        <img class="success-img" src="./images/success.png" alt="">
+        <span class="success-msg">上传成功!</span>
+      </div>
+      <div class="upload-error display-hide">
+        <img class="success-img" src="./images/success.png" alt="">
+        <span class="error-msg">上传失败!</span>
+        !
+      </div>
+      <img class="upload-loading" src="./images/gif1.gif" alt="">
+      <p style="margin-top: -30px;color: #fff;font-size:14px;">加载中!</p>
+    </div>
+  </div>
+  <script>
+    // 首先判断是中文版 还是 英文版
+    var locationSearch = location.search;
+    if (locationSearch) {
+      var theRequest = new Object();
+      if (locationSearch.indexOf("?") != -1) {
+        var str = locationSearch.substr(1);
+        strs = str.split("&");
+        for (var i = 0; i < strs.length; i++) {
+          theRequest[strs[i].split("=")[0]] = unescape(strs[i].split("=")[1]);
+        };
+      };
+      // console.log(theRequest)
+      if (theRequest.data) {
+        //  $('#data').val(theRequest.data);
+        // 解密
+        var dataObj = JSON.parse(decrypt(theRequest.data));
+        //  if (dataObj.guid) {
+        //      $('#guid').val(dataObj.guid);
+        //  }
+        // 判断ip
+        if (dataObj.addrs) {
+          if(dataObj.addrs.length!==1){
+            testIp(0, dataObj.addrs);
+          }else{
+            goUrl(dataObj.addrs[0], dataObj.path, locationSearch);
+          }
+        }
+      };
+    };
+    // 解密
+    function decrypt(data) {
+      var result = CryptoJS.AES.decrypt(data, CryptoJS.enc.Utf8.parse('8E7DD5D3E76AA952'), {
+        iv: CryptoJS.enc.Utf8.parse(''),
+        mode: CryptoJS.mode.ECB,
+        padding: CryptoJS.pad.Pkcs7
+      })
+      // console.log(result, result.toString(CryptoJS.enc.Utf8))
+      return result.toString(CryptoJS.enc.Utf8)
+    };
+
+    // 测试IP是否链接
+    function testIp(Index, addrs) {
+      $.ajax({
+        url: addrs[Index] + '/1.txt',
+        type: "get",
+        headers: {
+          'Content-Type': 'application/json;charset=utf8'
+        },
+        data: { ts: Date.parse(new Date()) / 1000 },
+        dataType: "jsonp",
+        // processData: false,
+        timeout:500, //超时时间，毫秒
+        complete(data) {
+          if (data.status == 200) {
+            // 链接成功  按之前提交 data/a/up
+            /**
+              addrs[Index] http://192.179.1.100/jyyp/html     dataObj.path ../takeaway  /takeaway
+              http://192.179.1.100/jyyp/takeaway
+            */
+            // var url = addrs[Index] data/ + '/uploadfile/index.html' + locationSearch;
+            // var url = addrs[Index] + '/takeaway' + locationSearch;
+            goUrl(addrs[Index], dataObj.path, locationSearch);
+          } else {
+            // console.log(2, Index, addrs[Index]);
+            // 链接失败 继续调用
+            if (Index < addrs.length-1) {
+              testIp(Index + 1, addrs);
+            } else {
+              goUrl(addrs[addrs.length-1], dataObj.path, locationSearch);
+              // alert('加载失败,请检查您的网络!');
+            }
+          };
+        }
+      });
+    };
+    function goUrl(addrs, path, locationSearch) {
+      //  看path有没有 ../
+      if (path.indexOf('../') === -1) {
+        if (path.indexOf('./') === -1) {
+          location.href = addrs + path + locationSearch;
+        } else {
+          location.href = addrs + path.replace('./', '/') + locationSearch;
+        };
+      } else {
+        var addrsArr = addrs.split('/');
+        var url = '';
+        for (var i = 0; i < addrsArr.length - 1; i++) {
+          url += addrsArr[i] + '/'
+        };
+        url += path.replace('../', '') + locationSearch;
+        location.href = url;
+      }
+
+    }
+  </script>
+
+</body>
+
+</html>
